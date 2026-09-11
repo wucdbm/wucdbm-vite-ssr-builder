@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig-build.json",
+    "include": ["lib/cli"],
+    "compilerOptions": {
+        "isolatedModules": false,
+        "resolveJsonModule": false,
+        "module": "System",
+        "declaration": false,
+        "baseUrl": "./",
+        "outFile": "./dist/cli/index.js",
+        "alwaysStrict": true,
+        "removeComments": true,
+        "moduleResolution": "Node",
+        "noEmit": false,
+        "allowImportingTsExtensions": false
+    }
+}

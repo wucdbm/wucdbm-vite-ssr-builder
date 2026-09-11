@@ -1,0 +1,73 @@
+{
+    "name": "wucdbm-vite-ssr-builder",
+    "private": false,
+    "description": "Vite builder utility for building your app for both client and ssr/server",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "bin": {
+        "wucdbm-vite-ssr-builder": "dist/cli/index.js"
+    },
+    "files": [
+        "dist",
+        "LICENSE",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=16"
+    },
+    "scripts": {
+        "dev": "vite",
+        "preview": "vite preview",
+        "build": "yarn build:lib && yarn build:cli",
+        "build:lib": "tsc --p ./tsconfig-build.json && vite build",
+        "build:cli": "tsc --p ./tsconfig-build.json && vite build --config vite-cli.config.ts --ssr",
+        "prepublishOnly": "npm run build",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "prepare": "husky install"
+    },
+    "peerDependencies": {
+        "vite": ">=8.3.0"
+    },
+    "peerDependenciesMeta": {
+        "vue": {
+            "optional": false
+        },
+        "@vue/server-renderer": {
+            "optional": false
+        },
+        "vue-router": {
+            "optional": false
+        }
+    },
+    "devDependencies": {
+        "@commitlint/cli": ">=18.5.0",
+        "@commitlint/config-conventional": ">=18.5.0",
+        "@types/connect": ">=3.4.38",
+        "@types/jsdom": ">=21.1.6",
+        "@types/node": ">=20.11.6",
+        "@typescript-eslint/eslint-plugin": ">=6.19.1",
+        "@typescript-eslint/parser": ">=6.19.1",
+        "eslint": "~8.56.0",
+        "eslint-config-prettier": ">=9.1.0",
+        "eslint-plugin-prettier": ">=5.1.3",
+        "husky": "9.1.7",
+        "jsdom": ">=24.0.0",
+        "lint-staged": ">=15.2.0",
+        "prettier": ">=3.2.4",
+        "typescript": ">=5.2.2",
+        "vite": ">=8.3.0",
+        "vite-plugin-dts": ">=3.7.2",
+        "vite-plugin-generate-file": "^0.3.1",
+        "vue": ">=3.4.15",
+        "vue-router": ">=4.2.5"
+    },
+    "lint-staged": {
+        "**/*.{js,ts,tsx}": [
+            "eslint --fix"
+        ],
+        "**/*": "prettier --write --ignore-unknown"
+    }
+}
