@@ -2,7 +2,7 @@
     "name": "wucdbm-vite-ssr-builder",
     "private": false,
     "description": "Vite builder utility for building your app for both client and ssr/server",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",

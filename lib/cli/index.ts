@@ -27,7 +27,11 @@ const config: CliConfig = {
 
 ;(async () => {
     buildClientAndServer(config)
-        .then(() => !watch && process.exit(0))
+        .then(() => {
+            if (!watch) {
+                process.exit(0)
+            }
+        })
         .catch((e: any) => {
             console.error(e)
             process.exit(1)

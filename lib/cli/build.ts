@@ -137,8 +137,33 @@ async function doBuildClientAndServer(
             pluginOptions,
             cliConfig,
         )
-        await build(serverBuildOptions)
+        const serverResult = await build(serverBuildOptions)
 
+        if (isWatching(serverResult)) {
+            serverResult.on('event', async (event: RolldownWatcherEvent) => {
+                const code = event.code
+
+                if ('BUNDLE_END' !== code) {
+                    return
+                }
+
+                const result = event.result
+
+                // This piece runs everytime there is
+                // an updated frontend bundle.
+                await result.close()
+
+                await makeServerStuff(serverBuildOptions, viteCoreDependencies)
+            })
+        } else {
+            await makeServerStuff(serverBuildOptions, viteCoreDependencies)
+        }
+    }
+
+    async function makeServerStuff(
+        serverBuildOptions: InlineConfig,
+        viteCoreDependencies: string[],
+    ): Promise<void> {
         if (pluginOptions?.removeIndexHtml) {
             fs.unlinkSync(
                 path.join(
