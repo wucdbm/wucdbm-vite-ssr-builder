@@ -18,7 +18,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             formats: ['es'],
         },
-        rollupOptions: {
+        rolldownOptions: {
             external: [
                 // Node Builtins
                 'node:path',
