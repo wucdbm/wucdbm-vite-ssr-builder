@@ -2,7 +2,7 @@
     "name": "wucdbm-vite-ssr-builder",
     "private": false,
     "description": "Vite builder utility for building your app for both client and ssr/server",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -59,9 +59,7 @@
         "prettier": ">=3.2.4",
         "typescript": ">=5.2.2",
         "vite": ">=8.3.0",
-        "vite-plugin-dts": ">=3.7.2",
-        "vue": ">=3.4.15",
-        "vue-router": ">=4.2.5"
+        "vite-plugin-dts": ">=3.7.2"
     },
     "lint-staged": {
         "**/*.{js,ts,tsx}": [
