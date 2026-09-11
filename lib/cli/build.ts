@@ -6,7 +6,7 @@ import {
     Plugin,
     InlineConfig,
 } from 'vite'
-import fs from 'fs'
+import fs from 'node:fs'
 import path from 'node:path'
 import { JSDOM } from 'jsdom'
 import type {
@@ -17,7 +17,6 @@ import type {
     RolldownWatcherEvent,
 } from 'rolldown'
 import { BuilderConfig } from '../config'
-import generateFile from 'vite-plugin-generate-file'
 
 export interface CliConfig {
     mode?: string
@@ -138,7 +137,6 @@ async function doBuildClientAndServer(
             viteConfig,
             pluginOptions,
             cliConfig,
-            viteCoreDependencies,
         )
         await build(serverBuildOptions)
 
@@ -157,6 +155,8 @@ async function doBuildClientAndServer(
             serverBuildOptions,
             pluginOptions?.packageJson,
         )
+
+        generateCoreDependencies(distDir, viteCoreDependencies)
     }
 
     // This is a build watcher
@@ -244,7 +244,6 @@ async function resolveServerOptions(
     viteConfig: ResolvedConfig,
     pluginConfig: BuilderConfig,
     cliConfig: CliConfig,
-    viteCoreDependencies: string[],
 ): Promise<InlineConfig> {
     const defaultOptions: InlineConfig = {
         mode: viteConfig.mode,
@@ -257,17 +256,6 @@ async function resolveServerOptions(
             ssr: await resolveEntryServerAbsolute(viteConfig, pluginConfig),
             // ssr: await getEntryPointAbsolute(viteConfig),
             emptyOutDir: false,
-            rollupOptions: {
-                plugins: [
-                    generateFile([
-                        {
-                            type: 'json',
-                            output: './.vite/core-dependencies.json',
-                            data: viteCoreDependencies,
-                        },
-                    ]),
-                ],
-            },
         },
     }
 
@@ -275,6 +263,34 @@ async function resolveServerOptions(
         defaultOptions,
         mergeConfig(pluginConfig?.serverOptions || {}, cliConfig),
     )
+}
+
+function generateCoreDependencies(
+    distDir: string,
+    viteCoreDependencies: string[],
+): void {
+    const outDir = path.resolve(distDir, 'server')
+    const filePath = path.resolve(outDir, './.vite/core-dependencies.json')
+
+    const fileContent = Buffer.from(
+        JSON.stringify(viteCoreDependencies),
+        'utf-8',
+    )
+    ensureDirectoryExists(filePath)
+    fs.writeFileSync(filePath, fileContent, { flag: 'w' })
+    console.log(`Generate File to ${filePath}`)
+}
+
+export function ensureDirectoryExists(filePath: string): void {
+    const dirname = path.dirname(filePath)
+
+    if (fs.existsSync(dirname)) {
+        return
+    }
+
+    fs.mkdirSync(dirname, {
+        recursive: true,
+    })
 }
 
 function isWatching(
@@ -294,7 +310,7 @@ async function generatePackageJson(
     }
 
     const outputFile = (
-        serverConfig.build?.rollupOptions?.output as OutputOptions
+        serverConfig.build?.rolldownOptions?.output as OutputOptions
     )?.file
 
     const ssrOutput = path.parse(

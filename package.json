@@ -2,7 +2,7 @@
     "name": "wucdbm-vite-ssr-builder",
     "private": false,
     "description": "Vite builder utility for building your app for both client and ssr/server",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -30,13 +30,9 @@
         "prepare": "husky install"
     },
     "peerDependencies": {
-        "vite": ">=8.3.0",
-        "vite-plugin-generate-file": ">=0.3.1"
+        "vite": ">=8.3.0"
     },
     "peerDependenciesMeta": {
-        "vite-plugin-generate-file": {
-            "optional": false
-        },
         "vite": {
             "optional": false
         }
@@ -53,7 +49,6 @@
         "eslint-config-prettier": ">=9.1.0",
         "eslint-plugin-prettier": ">=5.1.3",
         "husky": "9.1.7",
-        "vite-plugin-generate-file": ">=0.3.1",
         "jsdom": ">=30.0.1",
         "lint-staged": ">=15.2.0",
         "prettier": ">=3.2.4",
