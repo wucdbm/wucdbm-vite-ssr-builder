@@ -99,10 +99,9 @@ async function doBuildClientAndServer(
 
         // Get the index.html from the resulting bundle.
         const indexHtmlTemplate = (
-            clientOutputs.find(
-                (file) =>
-                    file.type === 'asset' && file.fileName === 'index.html',
-            ) as OutputAsset
+            clientOutputs.find((file) => {
+                return file.type === 'asset' && file.fileName === 'index.html'
+            }) as OutputAsset
         )?.source as string
 
         await generateServerBundle(indexHtmlTemplate)
@@ -296,7 +295,7 @@ export function ensureDirectoryExists(filePath: string): void {
 function isWatching(
     result: RolldownOutput | RolldownOutput[] | RolldownWatcher,
 ): result is RolldownWatcher {
-    return Object.prototype.hasOwnProperty.call(result, '_maxListeners')
+    return Object.prototype.hasOwnProperty.call(result, 'listeners')
 }
 
 async function generatePackageJson(
