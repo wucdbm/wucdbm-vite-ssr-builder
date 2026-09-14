@@ -1,5 +1,6 @@
 import type { PluginOption } from 'vite'
 import type { BuilderConfig } from './config'
+import { buildClientAndServer, CliConfig } from './cli/build.ts'
 
 export function WucdbmViteSSRBuilder(
     options: BuilderConfig = {},
@@ -9,3 +10,6 @@ export function WucdbmViteSSRBuilder(
         [PLUGIN_NAME]: options,
     }
 }
+
+export { buildClientAndServer }
+export type { CliConfig }

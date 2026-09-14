@@ -25,9 +25,15 @@ export interface CliConfig {
     }
 }
 
-export async function buildClientAndServer(config: CliConfig): Promise<void> {
+export async function buildClientAndServer(
+    config: CliConfig,
+    onBuildStart?: () => void,
+    onBuildEnd?: () => void,
+): Promise<void> {
     return new Promise((resolve, reject) => {
-        doBuildClientAndServer(config, resolve).catch(reject)
+        doBuildClientAndServer(config, resolve, onBuildStart, onBuildEnd).catch(
+            reject,
+        )
     })
 }
 
@@ -73,6 +79,8 @@ export function resolveEntryAbsolute(
 async function doBuildClientAndServer(
     cliConfig: CliConfig,
     onFirstBuild: () => void,
+    onBuildStart?: () => void,
+    onBuildEnd?: () => void,
 ): Promise<void> {
     const viteConfig = await resolveViteConfig()
 
@@ -87,6 +95,8 @@ async function doBuildClientAndServer(
     const clientResult = await build(clientBuildOptions)
 
     if (!isWatching(clientResult)) {
+        onBuildStart?.()
+
         // This is a normal one-off build
         const rollupOutputs = Array.isArray(clientResult)
             ? clientResult
@@ -100,13 +110,14 @@ async function doBuildClientAndServer(
             }) as OutputAsset
         )?.source as string
 
-        await generateServerBundle(indexHtmlTemplate)
+        await generateServerBundle(indexHtmlTemplate, onBuildEnd)
 
         return onFirstBuild()
     }
 
     async function generateServerBundle(
         indexHtmlTemplate: string,
+        onBuildEnd?: () => void,
     ): Promise<void> {
         const viteCoreDependencies: string[] = []
         const { document } = new JSDOM(indexHtmlTemplate).window
@@ -150,8 +161,20 @@ async function doBuildClientAndServer(
 
                 await makeServerStuff(serverBuildOptions, viteCoreDependencies)
             })
+
+            serverResult.on('event', async (event: RolldownWatcherEvent) => {
+                const code = event.code
+
+                if ('END' !== code) {
+                    return
+                }
+
+                onBuildEnd?.()
+            })
         } else {
             await makeServerStuff(serverBuildOptions, viteCoreDependencies)
+
+            onBuildEnd?.()
         }
     }
 
@@ -211,6 +234,16 @@ async function doBuildClientAndServer(
             onFirstBuild()
             resolved = true
         }
+    })
+
+    clientResult.on('event', async (event: RolldownWatcherEvent) => {
+        const code = event.code
+
+        if ('START' !== code) {
+            return
+        }
+
+        onBuildStart?.()
     })
 }
 
