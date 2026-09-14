@@ -1,42 +1,45 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
-import { name } from './package.json'
+import packageJson from './package.json' with { type: 'json' }
+import depsExternal from 'rollup-plugin-node-externals'
 
 export default defineConfig({
     plugins: [
         dts({
             rollupTypes: true,
             include: ['lib'],
-            exclude: ['lib/cli'],
+            // exclude: ['lib/cli'],
         }),
+        depsExternal(),
     ],
     build: {
+        outDir: './dist/lib',
+        emptyOutDir: true,
         minify: false,
         copyPublicDir: false,
         lib: {
-            entry: resolve(__dirname, 'lib/index.ts'),
+            entry: resolve(import.meta.dirname, 'lib/index.ts'),
             formats: ['es'],
         },
         rolldownOptions: {
             external: [
-                // Node Builtins
-                'node:path',
-                'node:http',
-                'node:fs',
+                /node_modules/,
+                ...Object.keys(packageJson.peerDependencies || {}),
+                ...Object.keys(packageJson.devDependencies || {}),
             ],
             output: {
-                assetFileNames: 'assets/[name][extname]',
+                // assetFileNames: 'assets/[name][extname]',
                 entryFileNames: '[name].js',
             },
         },
     },
     resolve: {
         alias: {
-            '@': resolve('lib/'),
+            '@': resolve(import.meta.dirname, 'lib/'),
         },
     },
     define: {
-        PLUGIN_NAME: JSON.stringify(name),
+        PLUGIN_NAME: JSON.stringify(packageJson['name']),
     },
 })

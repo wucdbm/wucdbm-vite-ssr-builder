@@ -2,10 +2,10 @@
     "name": "wucdbm-vite-ssr-builder",
     "private": false,
     "description": "Vite builder utility for building your app for both client and ssr/server",
-    "version": "0.0.7",
+    "version": "0.0.10",
     "type": "module",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/lib/index.js",
+    "types": "./dist/lib/index.d.ts",
     "bin": {
         "wucdbm-vite-ssr-builder": "dist/cli/index.js"
     },
@@ -23,7 +23,7 @@
         "preview": "vite preview",
         "build": "yarn build:lib && yarn build:cli",
         "build:lib": "tsc --p ./tsconfig-build.json && vite build",
-        "build:cli": "tsc --p ./tsconfig-build.json && vite build --config vite-cli.config.ts --ssr",
+        "build:cli": "tsc --p ./tsconfig-build.json && vite build --config vite-cli.config.ts",
         "prepublishOnly": "npm run build",
         "lint": "eslint .",
         "format": "prettier --write .",
@@ -52,9 +52,11 @@
         "jsdom": ">=30.0.1",
         "lint-staged": ">=15.2.0",
         "prettier": ">=3.2.4",
+        "rollup-plugin-node-externals": "^9.0.1",
         "typescript": ">=5.2.2",
         "vite": ">=8.3.0",
-        "vite-plugin-dts": ">=3.7.2"
+        "vite-plugin-dts": ">=3.7.2",
+        "vite-plugin-externalize-deps": "^0.10.0"
     },
     "lint-staged": {
         "**/*.{js,ts,tsx}": [

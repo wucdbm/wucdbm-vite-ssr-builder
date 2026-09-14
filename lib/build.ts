@@ -8,7 +8,6 @@ import {
 } from 'vite'
 import fs from 'node:fs'
 import path from 'node:path'
-import { JSDOM } from 'jsdom'
 import type {
     OutputAsset,
     OutputOptions,
@@ -16,12 +15,13 @@ import type {
     RolldownWatcher,
     RolldownWatcherEvent,
 } from 'rolldown'
-import { BuilderConfig } from '../config'
+import { BuilderConfig } from './config.ts'
+import { extractCoreDependencies } from './dependencies.ts'
 
 export interface CliConfig {
     mode?: string
     build: {
-        watch?: true
+        watch?: boolean
     }
 }
 
@@ -83,20 +83,29 @@ async function doBuildClientAndServer(
     onBuildEnd?: () => void,
 ): Promise<void> {
     const viteConfig = await resolveViteConfig()
-
-    const pluginOptions = getPluginOptions(viteConfig)
-
+    const pluginConfig = getPluginOptions(viteConfig)
     const clientBuildOptions = await resolveClientOptions(
         viteConfig,
-        pluginOptions,
+        pluginConfig,
+        cliConfig,
+    )
+    const serverBuildOptions = await resolveServerOptions(
+        viteConfig,
+        pluginConfig,
         cliConfig,
     )
 
-    const clientResult = await build(clientBuildOptions)
+    const asd: InlineConfig = cliConfig.build.watch
+        ? {
+              build: {
+                  watch: pluginConfig.watch,
+              },
+          }
+        : {}
+
+    const clientResult = await build(mergeConfig(clientBuildOptions, asd))
 
     if (!isWatching(clientResult)) {
-        onBuildStart?.()
-
         // This is a normal one-off build
         const rollupOutputs = Array.isArray(clientResult)
             ? clientResult
@@ -110,103 +119,55 @@ async function doBuildClientAndServer(
             }) as OutputAsset
         )?.source as string
 
-        await generateServerBundle(indexHtmlTemplate, onBuildEnd)
+        await generateServerBundle(indexHtmlTemplate)
 
         return onFirstBuild()
     }
 
     async function generateServerBundle(
         indexHtmlTemplate: string,
-        onBuildEnd?: () => void,
     ): Promise<void> {
-        const viteCoreDependencies: string[] = []
-        const { document } = new JSDOM(indexHtmlTemplate).window
+        const viteCoreDependencies = extractCoreDependencies(indexHtmlTemplate)
 
-        const scripts = document.querySelectorAll('script')
-        scripts.forEach((script) => {
-            const src = script.getAttribute('src')
-            if (src) {
-                viteCoreDependencies.push(src)
-            }
-        })
-
-        const links = document.querySelectorAll('link')
-        links.forEach((link) => {
-            const href = link.getAttribute('href')
-            if (href) {
-                viteCoreDependencies.push(href)
-            }
-        })
-
-        const serverBuildOptions = await resolveServerOptions(
-            viteConfig,
-            pluginOptions,
-            cliConfig,
-        )
         const serverResult = await build(serverBuildOptions)
 
         if (isWatching(serverResult)) {
-            serverResult.on('event', async (event: RolldownWatcherEvent) => {
-                const code = event.code
-
-                if ('BUNDLE_END' !== code) {
-                    return
-                }
-
-                const result = event.result
-
-                // This piece runs everytime there is
-                // an updated frontend bundle.
-                await result.close()
-
-                await makeServerStuff(serverBuildOptions, viteCoreDependencies)
-            })
-
-            serverResult.on('event', async (event: RolldownWatcherEvent) => {
-                const code = event.code
-
-                if ('END' !== code) {
-                    return
-                }
-
-                onBuildEnd?.()
-            })
-        } else {
-            await makeServerStuff(serverBuildOptions, viteCoreDependencies)
-
-            onBuildEnd?.()
+            throw new Error('For some reason server result is a watch result')
         }
-    }
 
-    async function makeServerStuff(
-        serverBuildOptions: InlineConfig,
-        viteCoreDependencies: string[],
-    ): Promise<void> {
-        if (pluginOptions?.removeIndexHtml) {
-            fs.unlinkSync(
-                path.join(
-                    clientBuildOptions.build?.outDir as string,
-                    'index.html',
-                ),
-            )
+        const clientOurDir = resolveClientDir(viteConfig, pluginConfig)
+
+        if (pluginConfig?.removeIndexHtml) {
+            fs.unlinkSync(path.join(clientOurDir, 'index.html'))
         }
 
         await generatePackageJson(
             viteConfig,
             clientBuildOptions,
             serverBuildOptions,
-            pluginOptions?.packageJson,
+            pluginConfig?.packageJson,
         )
 
-        const serverDistDir = resolveDistDir(
-            pluginOptions.serverOptions,
-            viteConfig,
-        )
+        const serverDistDir = resolveServerDir(viteConfig, pluginConfig)
+
         generateCoreDependencies(serverDistDir, viteCoreDependencies)
     }
 
-    // This is a build watcher
-    let resolved = false
+    let isDoneFirst = false
+
+    clientResult.on('event', async (event: RolldownWatcherEvent) => {
+        const code = event.code
+
+        if ('START' !== code) {
+            return
+        }
+
+        if (!isDoneFirst) {
+            return
+        }
+
+        onBuildStart?.()
+    })
 
     clientResult.on('event', async (event: RolldownWatcherEvent) => {
         const code = event.code
@@ -220,46 +181,62 @@ async function doBuildClientAndServer(
         // This piece runs everytime there is
         // an updated frontend bundle.
         await result.close()
-
-        // // Re-read the index.html in case it changed.
-        // // This content is not included in the virtual bundle.
-        const indexHtmlTemplate = fs.readFileSync(
-            (clientBuildOptions.build?.outDir as string) + '/index.html',
-            'utf-8',
-        )
-
-        await generateServerBundle(indexHtmlTemplate)
-
-        if (!resolved) {
-            onFirstBuild()
-            resolved = true
-        }
     })
 
     clientResult.on('event', async (event: RolldownWatcherEvent) => {
         const code = event.code
 
-        if ('START' !== code) {
+        if ('END' !== code) {
             return
         }
 
-        onBuildStart?.()
+        // // Re-read the index.html in case it changed.
+        // // This content is not included in the virtual bundle.
+        const distDir = resolveClientDir(viteConfig, pluginConfig)
+        const indexHtmlTemplate = fs.readFileSync(
+            distDir + '/index.html',
+            'utf-8',
+        )
+
+        await generateServerBundle(indexHtmlTemplate)
+
+        if (isDoneFirst) {
+            onBuildEnd?.()
+        } else {
+            onFirstBuild()
+            isDoneFirst = true
+        }
     })
 }
 
 function resolveDistDir(
     pluginOptions: InlineConfig | undefined,
     viteOptions: ResolvedConfig,
+    dir: 'client' | 'server',
 ): string {
     if (pluginOptions?.build?.outDir) {
         return pluginOptions?.build.outDir
     }
 
     if (viteOptions.build?.outDir) {
-        return viteOptions.build.outDir
+        return path.resolve(viteOptions.build.outDir, dir)
     }
 
-    return path.resolve(process.cwd(), 'dist')
+    return path.resolve(process.cwd(), 'dist', dir)
+}
+
+function resolveClientDir(
+    viteConfig: ResolvedConfig,
+    pluginConfig: BuilderConfig,
+): string {
+    return resolveDistDir(pluginConfig.clientOptions, viteConfig, 'client')
+}
+
+function resolveServerDir(
+    viteConfig: ResolvedConfig,
+    pluginConfig: BuilderConfig,
+): string {
+    return resolveDistDir(pluginConfig.serverOptions, viteConfig, 'server')
 }
 
 async function resolveClientOptions(
@@ -267,7 +244,7 @@ async function resolveClientOptions(
     pluginConfig: BuilderConfig,
     cliConfig: CliConfig,
 ): Promise<InlineConfig> {
-    const distDir = resolveDistDir(pluginConfig.clientOptions, viteConfig)
+    const distDir = resolveClientDir(viteConfig, pluginConfig)
 
     const inputFilePath = pluginConfig.input || ''
     const defaultFilePath = path.resolve(viteConfig.root, 'index.html')
@@ -276,9 +253,10 @@ async function resolveClientOptions(
     const defaultConfig: InlineConfig = {
         mode: viteConfig.mode,
         build: {
-            outDir: path.resolve(distDir, 'client'),
-            ssrManifest: true,
-            emptyOutDir: false,
+            outDir: distDir,
+            // todo restore this once vite's plugin is fixed
+            // ssrManifest: true,
+            emptyOutDir: true,
 
             // Custom input path
             rolldownOptions:
@@ -316,25 +294,34 @@ async function resolveServerOptions(
     pluginConfig: BuilderConfig,
     cliConfig: CliConfig,
 ): Promise<InlineConfig> {
-    const distDir = resolveDistDir(pluginConfig.serverOptions, viteConfig)
+    const distDir = resolveServerDir(viteConfig, pluginConfig)
 
-    const defaultOptions: InlineConfig = {
+    const defaultConfig: InlineConfig = {
         mode: viteConfig.mode,
         // No need to copy public files to SSR directory
         publicDir: false,
         build: {
-            outDir: path.resolve(distDir, 'server'),
+            outDir: distDir,
             // The plugin is already changing the vite-ssr alias to point to the server-entry.
             // Therefore, here we can just use the same entry point as in the index.html
             ssr: await resolveEntryServerAbsolute(viteConfig, pluginConfig),
             // ssr: await getEntryPointAbsolute(viteConfig),
-            emptyOutDir: false,
+            emptyOutDir: true,
+        },
+    }
+
+    const setWatchToFalse: CliConfig = {
+        build: {
+            watch: false,
         },
     }
 
     return mergeConfig(
-        defaultOptions,
-        mergeConfig(pluginConfig?.serverOptions || {}, cliConfig),
+        defaultConfig,
+        mergeConfig(
+            pluginConfig?.serverOptions || {},
+            mergeConfig(cliConfig, setWatchToFalse),
+        ),
     )
 }
 

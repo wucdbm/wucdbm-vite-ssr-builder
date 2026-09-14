@@ -1,4 +1,4 @@
-import { InlineConfig } from 'vite'
+import type { BuildEnvironmentOptions, InlineConfig } from 'vite'
 
 export interface BuilderConfig {
     /**
@@ -29,4 +29,10 @@ export interface BuilderConfig {
      * @default false
      */
     removeIndexHtml?: boolean
+    /**
+     * Rollup watch options
+     * https://rollupjs.org/configuration-options/#watch
+     * @default null
+     */
+    watch?: BuildEnvironmentOptions['watch']
 }

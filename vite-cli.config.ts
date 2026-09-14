@@ -1,28 +1,36 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
-import { name } from './package.json'
+import packageJson from './package.json' with { type: 'json' }
+import depsExternal from 'rollup-plugin-node-externals'
 
 export default defineConfig({
+    plugins: [depsExternal()],
     build: {
+        minify: false,
         outDir: './dist/cli',
-        emptyOutDir: false,
+        emptyOutDir: true,
         copyPublicDir: false,
         lib: {
-            entry: resolve(__dirname, 'lib/cli/index.ts'),
+            entry: resolve(import.meta.dirname, 'lib/cli/index.ts'),
             formats: ['es'],
         },
-        rollupOptions: {
+        rolldownOptions: {
             output: {
                 entryFileNames: '[name].js',
             },
+            external: [
+                /node_modules/,
+                ...Object.keys(packageJson.peerDependencies || {}),
+                ...Object.keys(packageJson.devDependencies || {}),
+            ],
         },
     },
     resolve: {
         alias: {
-            '@': resolve(__dirname, 'lib/'),
+            '@': resolve(import.meta.dirname, 'lib/'),
         },
     },
     define: {
-        PLUGIN_NAME: JSON.stringify(name),
+        PLUGIN_NAME: JSON.stringify(packageJson['name']),
     },
 })

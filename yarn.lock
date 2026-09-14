@@ -2237,6 +2237,11 @@ rolldown@~1.2.6:
     "@rolldown/binding-win32-arm64-msvc" "1.2.8"
     "@rolldown/binding-win32-x64-msvc" "1.2.8"
 
+rollup-plugin-node-externals@^9.0.1:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/rollup-plugin-node-externals/-/rollup-plugin-node-externals-9.0.1.tgz#4aface5266a69fb49091a8bbafd4cd9b21d51667"
+  integrity sha512-Yp91CX1ebDA8s4+BY7bOOdhF8VRR1XAKnSsHeVhYg4DW4MRXPsF4F2FnSsN9ghJgFhHl3L1uyK7A9NA/SF4Zgw==
+
 run-parallel@^1.1.9:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/run-parallel/-/run-parallel-1.2.0.tgz#66d1368da7bdf921eb9d95bd1a9229e7f21a43ee"
@@ -2535,6 +2540,11 @@ vite-plugin-dts@>=3.7.2:
     debug "^4.3.4"
     kolorist "^1.8.0"
     vue-tsc "^1.8.26"
+
+vite-plugin-externalize-deps@^0.10.0:
+  version "0.10.0"
+  resolved "https://registry.yarnpkg.com/vite-plugin-externalize-deps/-/vite-plugin-externalize-deps-0.10.0.tgz#75a64a731f86db14daf5e557403b3c8653508b9f"
+  integrity sha512-eQrtpT/Do7AvDn76l1yL6ZHyXJ+UWH2LaHVqhAes9go54qaAnPZuMbgxcroQ/7WY3ZyetZzYW2quQnDF0DV5qg==
 
 vite@>=8.3.0:
   version "8.3.0"
