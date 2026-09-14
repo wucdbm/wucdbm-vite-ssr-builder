@@ -76,13 +76,9 @@ async function doBuildClientAndServer(
 ): Promise<void> {
     const viteConfig = await resolveViteConfig()
 
-    const distDir =
-        viteConfig.build?.outDir ?? path.resolve(process.cwd(), 'dist')
-
     const pluginOptions = getPluginOptions(viteConfig)
 
     const clientBuildOptions = await resolveClientOptions(
-        distDir,
         viteConfig,
         pluginOptions,
         cliConfig,
@@ -132,7 +128,6 @@ async function doBuildClientAndServer(
         })
 
         const serverBuildOptions = await resolveServerOptions(
-            distDir,
             viteConfig,
             pluginOptions,
             cliConfig,
@@ -180,7 +175,11 @@ async function doBuildClientAndServer(
             pluginOptions?.packageJson,
         )
 
-        generateCoreDependencies(distDir, viteCoreDependencies)
+        const serverDistDir = resolveDistDir(
+            pluginOptions.serverOptions,
+            viteConfig,
+        )
+        generateCoreDependencies(serverDistDir, viteCoreDependencies)
     }
 
     // This is a build watcher
@@ -215,12 +214,28 @@ async function doBuildClientAndServer(
     })
 }
 
+function resolveDistDir(
+    pluginOptions: InlineConfig | undefined,
+    viteOptions: ResolvedConfig,
+): string {
+    if (pluginOptions?.build?.outDir) {
+        return pluginOptions?.build.outDir
+    }
+
+    if (viteOptions.build?.outDir) {
+        return viteOptions.build.outDir
+    }
+
+    return path.resolve(process.cwd(), 'dist')
+}
+
 async function resolveClientOptions(
-    distDir: string,
     viteConfig: ResolvedConfig,
     pluginConfig: BuilderConfig,
     cliConfig: CliConfig,
 ): Promise<InlineConfig> {
+    const distDir = resolveDistDir(pluginConfig.clientOptions, viteConfig)
+
     const inputFilePath = pluginConfig.input || ''
     const defaultFilePath = path.resolve(viteConfig.root, 'index.html')
     const inputFileName = inputFilePath.split('/').pop() || 'index.html'
@@ -264,11 +279,12 @@ async function resolveClientOptions(
 }
 
 async function resolveServerOptions(
-    distDir: string,
     viteConfig: ResolvedConfig,
     pluginConfig: BuilderConfig,
     cliConfig: CliConfig,
 ): Promise<InlineConfig> {
+    const distDir = resolveDistDir(pluginConfig.serverOptions, viteConfig)
+
     const defaultOptions: InlineConfig = {
         mode: viteConfig.mode,
         // No need to copy public files to SSR directory
@@ -290,11 +306,13 @@ async function resolveServerOptions(
 }
 
 function generateCoreDependencies(
-    distDir: string,
+    serverOutDir: string,
     viteCoreDependencies: string[],
 ): void {
-    const outDir = path.resolve(distDir, 'server')
-    const filePath = path.resolve(outDir, './.vite/core-dependencies.json')
+    const filePath = path.resolve(
+        serverOutDir,
+        './.vite/core-dependencies.json',
+    )
 
     const fileContent = Buffer.from(
         JSON.stringify(viteCoreDependencies),
